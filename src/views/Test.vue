@@ -7,46 +7,78 @@
     </div>
     <div class='button-wrapper'>
           <div class='button' @click="update">加载更多</div>
-          <div class='button'  @click='showSortButton'>排序
-          <div class='button-list' v-if='buttonShow'>
-            <div @click='sort("id")'>序号</div>
-            <div @click='sort("data")'>值</div>
-            <div @click='sort("time")'>时间</div>
-          </div>
-          </div>
     </div>
-    <div class='showAverage'>
-      平均值: {{average}}
+    <!-- <div class='showAverage'>
+
+    </div> -->
+    <div class='head'>
+      <div v-for='(head, index) in headArr' :key='index' @click='sort(head.name,head["_selected"])'>
+        <span>{{head.value}}</span>
+        <span class='showSort'>
+          <div class='notSelected' v-if='head["_selected"] == 0'></div>
+          <div class='notSelected' v-if='head["_selected"] == 0'></div>
+          <div class='sszSelected' v-if='head["_selected"] == 1'></div>
+          <div class='nszSelected' v-if='head["_selected"] == -1'></div>
+        </span>
+      </div>
     </div>
-    <div class='list'>
-      <div>序号</div>
-      <div>值</div>
-      <div>时间</div>
+    <div class="wrapper">
+      <div class="list" v-for="item in dataList" :key="item.id">
+        <div>{{item.id}}</div>
+        <div>{{item.data}}</div>
+        <div>{{changeDate(item.time)}}</div>
+      </div>
     </div>
-    <div class="list" v-for="item in dataList" :key="item.id">
-      <div>{{item.id}}</div>
-      <div>{{item.data}}</div>
-      <div>{{item.time}}</div>
+    <div class='pagenation'>
+        <span>平均值: {{average}}</span>
+        <span>当前页码：</span>
+        <span>
+          <img @click='updatePage("down")' src="https://s2.ax1x.com/2019/04/27/EuRikR.png" alt="EuRikR.png" border="0" />
+          <span class='page'>{{Page + 1}}</span>
+          <img @click='updatePage("up")' class src="https://s2.ax1x.com/2019/04/27/EuRnne.png" alt="EuRnne.png" border="0" />
+        </span>
+        <span>当前数据量：</span>
+        <span>
+          <select class='select' :value='PageCount' @change='updatePageCount'>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+          </span>
     </div>
   </div>
 </template>
 
 <script>
-import { mapGetters, mapState, mapActions, mapMutations } from 'vuex'
-import { setTimeout } from 'timers'
+import { mapGetters, mapState, mapActions } from 'vuex'
+import { changeDate } from './../util'
 export default {
   name: 'test',
   data () {
     return {
       showMask: false,
-      buttonShow: false,
-      uuid: 0
+      uuid: 0,
+      headArr: [{
+        name: 'id',
+        value: '序号',
+        '_selected': 0
+      }, {
+        name: 'data',
+        value: '数据',
+        '_selected': 0
+      }, {
+        name: 'time',
+        value: '创建时间',
+        '_selected': 0
+      }]
     }
   },
   computed: {
     ...mapState({
-      stateIndex: state => state.stateIndex,
-      action: state => state.action
+      Page: state => state.Page,
+      PageCount: state => state.PageCount,
+      action: state => state.action,
+      TotalCount: state => state.TotalCount
     }),
     ...mapGetters({
       average: 'getAverage',
@@ -60,30 +92,57 @@ export default {
       } else {
         this.showMask = false
       }
+    },
+    Page (val) {
+
     }
   },
   methods: {
-    ...mapMutations([
-      'ADD_PAGE',
-      'SORT_DATA',
-      'LOADING'
-    ]),
     ...mapActions([
-      'getDataCall'
+      'getDataCall',
+      'sortData'
     ]),
+    changeDate: (date) => {
+      return changeDate(date)
+    },
+    refreshData (Page, PageCount) {
+      this.getDataCall({
+        Page,
+        PageCount
+      })
+    },
     update () {
-      this.ADD_PAGE()
-      this.getDataCall()
-      this.buttonShow = false
+      let Page = this.Page + 1
+      this.refreshData(Page, this.PageCount)
     },
-    sort (type) {
-      this.LOADING()
-      setTimeout(() => {
-        this.SORT_DATA(type)
-      }, 1000)
+    sort (name, type) {
+      this.headArr.forEach(v => {
+        if (v.name === name) {
+          switch (type) {
+            case 0:
+            case -1:
+              v['_selected'] = 1
+              break
+            case 1:
+              v['_selected'] = -1
+              break
+          }
+        } else {
+          v['_selected'] = 0
+        }
+      })
+      this.sortData({ name, type })
     },
-    showSortButton () {
-      this.buttonShow = !this.buttonShow
+    updatePageCount (e) {
+      this.refreshData(this.Page, e.target.value)
+    },
+    updatePage (v) {
+      if (typeof v === 'string') {
+        let pageNum = v === 'down' ? this.Page - 1 : this.Page + 1
+        if (pageNum >= 0) {
+          this.refreshData(pageNum, this.PageCount)
+        }
+      }
     }
   },
   mounted () {
@@ -95,7 +154,6 @@ export default {
 <style scoped lang="less">
 .test{
   margin: 0 10px;
-  border-bottom:1px solid #e3e3e3;
   .container{
     position:fixed;
     top:0;
@@ -103,6 +161,7 @@ export default {
     bottom:0;
     left:0;
     background:rgba(0,0,0,0.3);
+    z-index:99;
   }
   .mask{
     position:absolute;
@@ -116,60 +175,157 @@ export default {
       left:-50px;
       top:-50px;
       color:#fff;
-      // background-color: blue;
+      transition: all 0.5s ease-in-out 1s;
     }
   }
   .showAverage{
-    padding:10px;
+    // padding: 10px;
     text-align: right;
+    span {
+      margin-left:20px;
+    }
+    .select {
+      width: 60px;
+      height: 30px;
+      line-height: 30px;
+      background: #fff;
+      border: none;
+      color: #42b983;
+      padding-left: 10px;
+    }
+    img {
+      vertical-align: middle;
+    }
+    input {
+      width:40px;
+      height:25px;
+      padding-left: 10px;
+      border-radius: 5px;
+    }
   }
-  .list{
+  .head {
     display: flex;
-    flex-direction: row;
-      div{
-        flex:1;
-        padding:10px 0;
-        border-right:1px solid #e3e3e3;
-        border-top:1px solid #e3e3e3;
+    background: #42b983;
+    padding: 10px 0 ;
+    color:#fff;
+    div {
+      flex:1;
+    }
+    div:last-child{
+      flex: 3;
+    }
+    .showSort {
+      position: relative;
+      margin-left:10px;
+      div {
+        width: 14px;
+        height: 14px;
       }
-      div:first-child{
-        border-left:1px solid #e3e3e3;
+      .notSelected:first-child {
+        position: absolute;
+        top: 0;
+        left:0;
+        background-image :url('https://s2.ax1x.com/2019/04/27/EKazD0.png');
+        background-size:cover;
       }
-      div:last-child{
-        flex:3;
+      .notSelected:nth-child(2) {
+        position: absolute;
+        top: 7px;
+        left: 0;
+        background-image :url('https://s2.ax1x.com/2019/04/27/EKaXgs.png');
+        background-size:cover;
       }
-  }
-  .button-wrapper {
-    width:300px;
-    display: flex;
-    text-align:right;
-    .button-list {
-      position:absolute;
-      color:#000;
-      background-color: #fff;
-      top:40px;
-      border:1px solid #e3e3e3;
-      left:0;
-      div{
-        width:130px;
-        padding:5px;
-        border-bottom:1px solid #e3e3e3;
-        cursor: pointer;
+      .sszSelected {
+        position: absolute;
+        top: 0;
+        left:0;
+        background-image :url('https://s2.ax1x.com/2019/04/27/EKwlwV.png');
+        background-size:cover;
+      }
+      .nszSelected {
+        position: absolute;
+        top: 7px;
+        left:0;
+        background-image :url('https://s2.ax1x.com/2019/04/27/EKw0w6.png');
+        background-size:cover;
       }
     }
+  }
+  .wrapper {
+    position: absolute;
+    top: 177px;
+    bottom: 60px;
+    left: 18px;
+    right:18px;
+    overflow-x: hidden;
+    border-bottom: 1px solid #e3e3e3;
+    .list{
+      display: flex;
+      flex-direction: row;
+      z-index:9;
+        div{
+          flex:1;
+          font-size:14px;
+          padding: 10px 0;
+          border-right: 1px solid #e3e3e3;
+          border-top: 1px solid #e3e3e3;
+        }
+        div:first-child{
+          border-left: 1px solid #e3e3e3;
+        }
+        div:last-child{
+          flex: 3;
+        }
+    }
+  }
+  .pagenation {
+    position : fixed;
+    bottom: 0;
+    left:0;
+    right:0;
+    height: 60px;
+    line-height: 60px;
+    padding-right:20px;
+    text-align: right;
+    span:not(.page) {
+      margin-left: 20px;
+    }
+    .page{
+      padding: 0 10px;
+    }
+    .select {
+      width: 60px;
+      height: 30px;
+      line-height: 30px;
+      font-size: 18px;
+      background: transparent;
+      border: none;
+      color: #dac4b9;
+      padding-left: 10px;
+    }
+    img {
+      vertical-align: middle;
+    }
+    input {
+      width:40px;
+      height:25px;
+      padding-left: 10px;
+      border-radius: 5px;
+    }
+  }
+  .button-wrapper {
+    width:200px;
+    display: flex;
+    text-align:right;
     .button{
       flex:1;
-      margin: 10px 10px 10px 0;
+      margin: 0 10px 10px 0;
       background-color: #42b983;
-      padding: 10px;
+      padding: 8px 10px;
       text-align:center;
       font-size: 15px;
       color: white;
-      width: 100%;
-    }
-    .button:last-child{
-      position:relative;
-      background-color: blue;
+      border-radius: 5px;
     }
   }
 }

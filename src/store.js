@@ -4,16 +4,18 @@ import mockGenerator from './mock'
 import { _uuid, compare, getAverageNum } from './util'
 Vue.use(Vuex)
 const ADD_PAGE = 'ADD_PAGE'
-const GET_DATALIST = 'GET_DATALIST'
+// const GET_DATALIST = 'GET_DATALIST'
+const GET_DATALIST_SUCCESS = 'GET_DATALIST_SUCCESS'
 const LOADING = 'LOADING'
 const SORT_DATA = 'SORT_DATA'
 export default new Vuex.Store({
   state: {
     dataList: [],
-    stateIndex: 0,
-    pageCount: 20,
+    Page: 0,
+    PageCount: 20,
     action: '',
-    _uuid: _uuid()
+    _uuid: _uuid(),
+    TotalCount: 300
   },
   mutations: {
     [ADD_PAGE] (state) {
@@ -21,10 +23,17 @@ export default new Vuex.Store({
       state.action = 'ADD_PAGE'
       state.stateIndex += 1
     },
-    [GET_DATALIST] (state, payload) {
+    [GET_DATALIST_SUCCESS] (state, response) {
       state._uuid = _uuid()
-      state.action = 'GET_DATALIST'
-      state.dataList = payload
+      const { res, payload } = response
+      state.action = 'GET_DATALIST_SUCCESS'
+      if (payload) {
+        const { Page, PageCount } = payload
+        state.Page = Page
+        state.PageCount = PageCount
+        console.log(state.Page)
+      }
+      state.dataList = res
     },
     [LOADING] (state) {
       state._uuid = _uuid()
@@ -44,20 +53,21 @@ export default new Vuex.Store({
     getData: state => state.dataList
   },
   actions: {
-    getDataCall ({ commit, state }) {
+    getDataCall ({ commit, state }, payload) {
       commit(LOADING)
       // TODO
-      console.log(state.stateIndex * state.pageCount)
-      let num = state.stateIndex * state.pageCount
-      if (num === 0) {
-        mockGenerator(num).then(res => {
-          commit(GET_DATALIST, res)
-        })
-      } else {
-        mockGenerator(num, num + 20).then(res => {
-          commit(GET_DATALIST, res)
-        })
+      let { Page, PageCount } = state
+      if (payload) {
+        Page = payload.Page
+        PageCount = payload.PageCount
       }
+      mockGenerator(Page * PageCount, (Page + 1) * PageCount).then(res => {
+        commit(GET_DATALIST_SUCCESS, { res, payload })
+      })
+    },
+    sortData ({ commit, state }, payload) {
+      commit(LOADING)
+      setTimeout(() => commit(SORT_DATA, payload), 1000)
     }
   }
 })

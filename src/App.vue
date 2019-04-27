@@ -1,7 +1,8 @@
 <template>
   <div id="app">
     <div id="nav">
-      <router-link to="/">Home</router-link> |
+      <a>test系统</a>
+      <router-link to="/">Home</router-link>
       <router-link to="/test">Test</router-link>
     </div>
     <router-view/>
@@ -17,12 +18,17 @@
   color: #2c3e50;
 }
 #nav {
-  padding: 30px;
+  padding: 20px;
+  text-align:left;
   a {
+    display: inline-block;
+    padding: 10px;
+    text-decoration: none;
     font-weight: bold;
     color: #2c3e50;
     &.router-link-exact-active {
       color: #42b983;
+      border-bottom:1px solid #42b983;
     }
   }
 }
